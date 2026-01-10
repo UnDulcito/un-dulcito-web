@@ -3,7 +3,7 @@
 import { useCart } from "@/context/CartContext";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import ProductModal from "./ProductModal"; // Asegúrate de tener este componente
+import ProductModal from "./ProductModal"; 
 
 interface ProductCardProps {
   id: string | number;
@@ -21,9 +21,10 @@ export default function ProductCard(props: ProductCardProps) {
   const [showModal, setShowModal] = useState(false);
 
   const handleAddToCart = (e?: React.MouseEvent) => {
-    // Evitamos que al dar click en añadir al carrito se abra el modal también
+    // Evitamos propagación si viene de un click directo
     e?.stopPropagation();
 
+    // Parche de seguridad para el ID
     const cartId = typeof id === 'string' ? new Date().getTime() + Math.random() : id;
 
     addToCart({ 
@@ -51,6 +52,9 @@ export default function ProductCard(props: ProductCardProps) {
       }
     );
     openCart();
+    
+    // Si se agregó desde el modal, cerramos el modal
+    if (showModal) setShowModal(false);
   };
 
   return (
@@ -111,11 +115,12 @@ export default function ProductCard(props: ProductCardProps) {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL CORREGIDO: Ahora le pasamos onAddToCart */}
       <ProductModal 
         isOpen={showModal} 
         onClose={() => setShowModal(false)} 
         product={props} 
+        onAddToCart={() => handleAddToCart()} // <--- ¡ESTO FALTABA!
       />
     </>
   );
