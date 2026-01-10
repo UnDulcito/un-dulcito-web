@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
-// 🔴 TU CLAVE DE IMGBB YA ESTÁ PUESTA
 const IMGBB_API_KEY = "311b995887253b03641cfaa6f53b3f96"; 
 
 interface Product {
@@ -41,6 +40,10 @@ export default function Dashboard() {
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  
+  // NUEVO: Estado para gestionar el borrado de categorías
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  
   const [newCategoryName, setNewCategoryName] = useState("");
 
   // Estados Producto (Formulario)
@@ -51,7 +54,6 @@ export default function Dashboard() {
   const [newFeatures, setNewFeatures] = useState<string[]>([...DEFAULT_FEATURES]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   
-  // ESTADO NUEVO PARA EDICIÓN
   const [editingId, setEditingId] = useState<string | null>(null); 
   const [currentImageUrl, setCurrentImageUrl] = useState(""); 
 
@@ -110,11 +112,10 @@ export default function Dashboard() {
     setNewFeatures(updated);
   };
 
-  // 3. FUNCIÓN MAESTRA: GUARDAR (Crear o Editar)
+  // 3. FUNCIÓN MAESTRA: GUARDAR
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validaciones básicas
     if (!newName || !newPrice) {
       toast.error("Faltan nombre o precio 📝");
       return;
@@ -125,16 +126,12 @@ export default function Dashboard() {
         return;
     }
 
-    // --- CORRECCIÓN AQUÍ: Eliminamos el bloque IF que daba error ---
-    // Ya no verificamos si la clave es "TU_API_KEY..." porque ya pusiste la real.
-
     setIsUploading(true);
     const toastId = toast.loading(editingId ? "Actualizando..." : "Creando...");
 
     try {
       let finalImageUrl = currentImageUrl; 
 
-      // SI HAY UN ARCHIVO NUEVO, SUBIMOS A IMGBB
       if (imageFile) {
         const formData = new FormData();
         formData.append("image", imageFile);
@@ -160,12 +157,10 @@ export default function Dashboard() {
       };
 
       if (editingId) {
-        // --- MODO EDICIÓN ---
         const productRef = doc(db, "products", editingId);
         await updateDoc(productRef, productData);
         toast.success("¡Producto actualizado! ✨", { id: toastId });
       } else {
-        // --- MODO CREACIÓN ---
         await addDoc(collection(db, "products"), {
             ...productData,
             createdAt: serverTimestamp(), 
@@ -183,7 +178,6 @@ export default function Dashboard() {
     }
   };
 
-  // 4. PREPARAR EDICIÓN
   const handleEdit = (product: Product) => {
     setEditingId(product.id);
     setNewName(product.name);
@@ -198,7 +192,6 @@ export default function Dashboard() {
     toast("Modo Edición Activado ✏️", { icon: '📝' });
   };
 
-  // 5. CANCELAR EDICIÓN / LIMPIAR
   const handleCancelEdit = () => {
     setEditingId(null);
     setNewName("");
@@ -227,6 +220,17 @@ export default function Dashboard() {
       setIsAddingCategory(false);
     } catch (error) {
       toast.error("Error al crear categoría");
+    }
+  };
+
+  // NUEVO: Borrar categoría
+  const handleDeleteCategory = async (catId: string) => {
+    if (!confirm("¿Seguro que quieres borrar esta categoría?")) return;
+    try {
+      await deleteDoc(doc(db, "categories", catId));
+      toast.success("Categoría borrada 🗑️");
+    } catch (error) {
+      toast.error("Error al borrar");
     }
   };
 
@@ -288,20 +292,51 @@ export default function Dashboard() {
               {/* Precio y Categoría */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Precio ($)</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Precio (€)</label>
                   <input type="number" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="0.00" className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 flex justify-between">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 flex justify-between items-center">
                     Categoría
-                    <button type="button" onClick={() => setIsAddingCategory(!isAddingCategory)} className="text-deep-rose hover:underline text-[10px]">
-                      {isAddingCategory ? "Cancelar" : "+ Nueva"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => { setIsDeletingCategory(!isDeletingCategory); setIsAddingCategory(false); }} 
+                        className={`text-[10px] hover:underline ${isDeletingCategory ? 'text-red-600 font-bold' : 'text-gray-400 hover:text-red-500'}`}
+                      >
+                        {isDeletingCategory ? "Listo" : "Borrar"}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => { setIsAddingCategory(!isAddingCategory); setIsDeletingCategory(false); }} 
+                        className="text-deep-rose hover:underline text-[10px]"
+                      >
+                        {isAddingCategory ? "Cancelar" : "+ Nueva"}
+                      </button>
+                    </div>
                   </label>
+
+                  {/* LÓGICA DE INTERFAZ DE CATEGORÍAS */}
                   {isAddingCategory ? (
                     <div className="flex gap-1 animate-fadeIn">
                       <input type="text" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Ej. Helados" className="w-full p-3 rounded-l-xl border border-deep-rose focus:outline-none text-sm" autoFocus />
                       <button type="button" onClick={handleCreateCategory} className="bg-deep-rose text-white px-3 rounded-r-xl font-bold hover:bg-rose">OK</button>
+                    </div>
+                  ) : isDeletingCategory ? (
+                    <div className="flex flex-wrap gap-2 p-2 bg-red-50 rounded-xl border border-red-100">
+                      {dbCategories.length === 0 && <span className="text-xs text-gray-400">No hay categorías personalizadas para borrar.</span>}
+                      {dbCategories.map(cat => (
+                        <span key={cat.id} className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-md text-xs text-warm-charcoal shadow-sm border border-gray-100">
+                          {cat.name}
+                          <button 
+                            type="button" 
+                            onClick={() => handleDeleteCategory(cat.id)}
+                            className="text-red-500 hover:text-red-700 font-bold ml-1"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
                     </div>
                   ) : (
                     <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose outline-none bg-white">
@@ -351,7 +386,6 @@ export default function Dashboard() {
                     Foto {editingId && "(Opcional si ya tiene)"}
                 </label>
                 
-                {/* Previsualización si estamos editando y no hay archivo nuevo seleccionado */}
                 {editingId && !imageFile && currentImageUrl && (
                     <div className="mb-2 relative w-full h-32 rounded-xl overflow-hidden border border-gray-200">
                         <img src={currentImageUrl} alt="Actual" className="w-full h-full object-cover opacity-70" />
@@ -416,11 +450,11 @@ export default function Dashboard() {
                     <div className="flex-1 flex flex-col justify-center">
                       <span className="text-xs font-bold text-rose uppercase tracking-wide bg-rose/10 px-2 py-1 rounded-md w-fit mb-1">{product.category}</span>
                       <h3 className="font-bold text-warm-charcoal text-lg leading-tight">{product.name}</h3>
-                      <p className="text-gray-500 font-medium mt-1">${product.price.toFixed(2)}</p>
+                      <p className="text-gray-500 font-medium mt-1">€{product.price.toFixed(2)}</p>
                     </div>
 
-                    {/* Botonera de Acciones */}
-                    <div className="absolute top-2 right-2 flex gap-2 translate-x-14 group-hover:translate-x-0 transition-transform duration-300">
+                    {/* Botonera de Acciones (SIEMPRE VISIBLE EN MÓVIL) */}
+                    <div className="absolute top-2 right-2 flex gap-2 md:translate-x-14 md:group-hover:translate-x-0 transition-transform duration-300">
                         {/* Botón EDITAR */}
                         <button 
                             onClick={() => handleEdit(product)}
