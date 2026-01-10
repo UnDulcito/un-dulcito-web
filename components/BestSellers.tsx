@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ProductCard from "./ProductCard";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import Link from "next/link"; // IMPORTANTE: Importar Link
 
 interface Product {
   id: string;
@@ -13,7 +14,7 @@ interface Product {
   image: string;
   description?: string;
   features?: string[];
-  bestSellerOrder?: number; // Para poder ordenar
+  bestSellerOrder?: number;
 }
 
 export default function BestSellers() {
@@ -23,7 +24,6 @@ export default function BestSellers() {
   useEffect(() => {
     const fetchBestSellers = async () => {
       try {
-        // 1. SOLO FILTRAMOS (Quitamos el orderBy para que Firebase no se queje del Índice)
         const q = query(
             collection(db, "products"), 
             where("isBestSeller", "==", true)
@@ -35,11 +35,9 @@ export default function BestSellers() {
             ...doc.data()
         })) as Product[];
         
-        // 2. ORDENAMOS AQUÍ (En JavaScript, más fácil y rápido para pocos datos)
-        // Ordenamos por el número 'bestSellerOrder' de menor a mayor
+        // Ordenar manualmente
         data.sort((a, b) => (a.bestSellerOrder || 99) - (b.bestSellerOrder || 99));
 
-        // 3. Tomamos solo los primeros 4
         setProducts(data.slice(0, 4));
         
       } catch (error) {
@@ -67,7 +65,7 @@ export default function BestSellers() {
       );
   }
 
-  // Si no hay productos marcados, no mostramos la sección
+  // Si no hay productos, no renderizamos nada
   if (products.length === 0) return null;
 
   return (
@@ -98,6 +96,16 @@ export default function BestSellers() {
                 {...product} 
              />
           ))}
+        </div>
+
+        {/* BOTÓN VER CATÁLOGO COMPLETO (AÑADIDO) */}
+        <div className="mt-16 text-center animate-fade-in-up delay-300">
+            <Link 
+              href="/catalogo"
+              className="inline-block px-10 py-4 bg-transparent border-2 border-deep-rose text-deep-rose rounded-full font-bold text-lg hover:bg-deep-rose hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg"
+            >
+              Ver Menú Completo 🧁
+            </Link>
         </div>
       </div>
     </section>
