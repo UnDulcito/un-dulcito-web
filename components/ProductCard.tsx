@@ -17,18 +17,17 @@ interface ProductCardProps {
 
 export default function ProductCard(props: ProductCardProps) {
   const { id, name, price, image, category } = props;
-  const { addToCart, openCart } = useCart();
+  const { addToCart } = useCart(); // YA NO IMPORTAMOS openCart AQUÍ
   const [showModal, setShowModal] = useState(false);
 
   const handleAddToCart = (e?: React.MouseEvent) => {
-    // Evitamos propagación si viene de un click directo
     e?.stopPropagation();
 
-    // Parche de seguridad para el ID
-    const cartId = typeof id === 'string' ? new Date().getTime() + Math.random() : id;
-
+    // 1. ELIMINADO: Ya no generamos ID aleatorio. Usamos el ID real de Firebase.
+    // Esto arregla que los productos se agrupen (5 brookies = Cantidad: 5).
+    
     addToCart({ 
-        id: cartId as number,
+        id: id, 
         name, 
         price, 
         image 
@@ -51,9 +50,10 @@ export default function ProductCard(props: ProductCardProps) {
         },
       }
     );
-    openCart();
     
-    // Si se agregó desde el modal, cerramos el modal
+    // 2. ELIMINADO: openCart(); 
+    // Ahora el carrito NO se abre solo. Se queda cerrado para seguir comprando.
+    
     if (showModal) setShowModal(false);
   };
 
@@ -62,7 +62,6 @@ export default function ProductCard(props: ProductCardProps) {
       <div 
         className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group border border-transparent hover:border-strawberry-milk/30 flex flex-col h-full"
       >
-        {/* IMAGEN: Ahora tiene cursor-pointer y abre el modal */}
         <div 
             className="relative h-64 overflow-hidden bg-gray-100 cursor-pointer"
             onClick={() => setShowModal(true)}
@@ -115,12 +114,11 @@ export default function ProductCard(props: ProductCardProps) {
         </div>
       </div>
 
-      {/* MODAL CORREGIDO: Ahora le pasamos onAddToCart */}
       <ProductModal 
         isOpen={showModal} 
         onClose={() => setShowModal(false)} 
         product={props} 
-        onAddToCart={() => handleAddToCart()} // <--- ¡ESTO FALTABA!
+        onAddToCart={() => handleAddToCart()} 
       />
     </>
   );

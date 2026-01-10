@@ -2,21 +2,20 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-// 1. Definimos cómo se ve un producto en el carrito
+// CAMBIO: id ahora puede ser string (texto) o number
 export interface CartItem {
-  id: number;
+  id: string | number; 
   name: string;
   price: number;
   image: string;
   quantity: number;
 }
 
-// 2. Definimos qué funciones tendrá nuestro contexto
 interface CartContextType {
   items: CartItem[];
   addToCart: (product: Omit<CartItem, "quantity">) => void;
-  removeFromCart: (id: number) => void;
-  clearCart: () => void; // <--- NUEVO: Función para vaciar
+  removeFromCart: (id: string | number) => void; // CAMBIO AQUÍ TAMBIÉN
+  clearCart: () => void;
   total: number;
   isOpen: boolean;
   openCart: () => void;
@@ -24,40 +23,37 @@ interface CartContextType {
   cartCount: number;
 }
 
-// 3. Creamos el contexto vacío
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// 4. El Proveedor
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Función para añadir productos
   const addToCart = (product: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
+      // Ahora comparamos IDs reales, sin inventos raros
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
+        // Si ya existe, sumamos +1 a la cantidad
         return prev.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+      // Si no existe, lo agregamos nuevo
       return [...prev, { ...product, quantity: 1 }];
     });
   };
 
-  // Función para quitar productos (uno por uno)
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string | number) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Función para vaciar TODO el carrito (NUEVO)
   const clearCart = () => {
     setItems([]);
   };
 
-  // Cálculos automáticos
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -67,7 +63,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         items,
         addToCart,
         removeFromCart,
-        clearCart, // <--- EXPORTAMOS LA FUNCIÓN
+        clearCart,
         total,
         isOpen,
         openCart: () => setIsOpen(true),
@@ -80,7 +76,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// 5. Hook personalizado
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {
