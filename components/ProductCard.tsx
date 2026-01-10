@@ -79,7 +79,7 @@ export default function ProductCard(product: ProductProps) {
           </h3>
           <div className="mt-auto pt-2">
             <p className="text-deep-rose font-extrabold text-2xl">
-                ${price.toFixed(2)}
+                €{price.toFixed(2)}
             </p>
           </div>
         </div>

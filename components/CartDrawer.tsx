@@ -3,12 +3,13 @@
 import { useCart } from "@/context/CartContext";
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti"; // <-- 1. Importamos la fiesta
+import confetti from "canvas-confetti"; 
 
 export default function CartDrawer() {
-  const { items, removeFromCart, total, isOpen, closeCart } = useCart();
+  const { items, removeFromCart, clearCart, total, isOpen, closeCart } = useCart();
 
-  const PHONE_NUMBER = "584121289510"; 
+  // CAMBIO: Nuevo número de teléfono
+  const PHONE_NUMBER = "584227186334"; 
 
   useEffect(() => {
     if (isOpen) {
@@ -38,20 +39,18 @@ export default function CartDrawer() {
 
       const particleCount = 50 * (timeLeft / duration);
       
-      // Confeti desde la izquierda y derecha
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
     }, 250);
 
     // 3. Preparamos el mensaje de WhatsApp
-    let message = "¡Hola Un Dulcito! 🧁\nQuisiera realizar el siguiente pedido:\n\n";
+    let message = "¡Hola Un Dulcito! \nQuisiera realizar el siguiente pedido:\n\n";
     items.forEach((item) => {
-      message += `▪️ ${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}\n`;
+      message += `- ${item.quantity}x ${item.name} - €${(item.price * item.quantity).toFixed(2)}\n`;
     });
-    message += `\n*TOTAL A PAGAR: $${total.toFixed(2)}*`;
+    message += `\n*TOTAL A PAGAR: €${total.toFixed(2)}*`;
     message += "\n\nQuedo atento para coordinar el pago y la entrega. ¡Gracias!";
     
-    // Pequeño delay de 1 segundo para que disfrute el confeti antes de irse
     setTimeout(() => {
         const encodedMessage = encodeURIComponent(message);
         const whatsappURL = `https://wa.me/${PHONE_NUMBER}?text=${encodedMessage}`;
@@ -83,7 +82,21 @@ export default function CartDrawer() {
           >
             {/* CABECERA */}
             <div className="p-6 flex justify-between items-center border-b border-strawberry-milk/30 bg-cream-white">
-              <h2 className="text-2xl font-script text-deep-rose">Tu Pedido Dulce</h2>
+              <div>
+                <h2 className="text-2xl font-script text-deep-rose">Tu Pedido Dulce</h2>
+                {/* BOTÓN DE VACIAR CARRITO */}
+                {items.length > 0 && (
+                  <button 
+                    onClick={clearCart}
+                    className="text-xs text-red-500 hover:text-red-700 underline flex items-center gap-1 mt-1 transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Vaciar Carrito
+                  </button>
+                )}
+              </div>
               <button
                 onClick={closeCart}
                 className="p-2 hover:bg-strawberry-milk/20 rounded-full transition-colors group"
@@ -128,7 +141,7 @@ export default function CartDrawer() {
                       <div className="flex-1">
                         <h4 className="font-bold text-warm-charcoal text-lg font-sans">{item.name}</h4>
                         <p className="text-sm text-gray-500">Cantidad: {item.quantity}</p>
-                        <p className="text-deep-rose font-bold">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="text-deep-rose font-bold">€{(item.price * item.quantity).toFixed(2)}</p>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id)}
@@ -156,7 +169,7 @@ export default function CartDrawer() {
                           transition={{ type: "spring", stiffness: 500, damping: 15 }}
                           className="text-3xl font-script text-deep-rose block"
                         >
-                          ${total.toFixed(2)}
+                          €{total.toFixed(2)}
                         </motion.span>
                     </div>
                     

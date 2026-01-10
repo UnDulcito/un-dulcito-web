@@ -16,6 +16,7 @@ interface CartContextType {
   items: CartItem[];
   addToCart: (product: Omit<CartItem, "quantity">) => void;
   removeFromCart: (id: number) => void;
+  clearCart: () => void; // <--- NUEVO: Función para vaciar
   total: number;
   isOpen: boolean;
   openCart: () => void;
@@ -44,12 +45,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    // setIsOpen(true); <--- ¡LÍNEA ELIMINADA! Ya no se abre solo.
   };
 
-  // Función para quitar productos
+  // Función para quitar productos (uno por uno)
   const removeFromCart = (id: number) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  // Función para vaciar TODO el carrito (NUEVO)
+  const clearCart = () => {
+    setItems([]);
   };
 
   // Cálculos automáticos
@@ -62,6 +67,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         items,
         addToCart,
         removeFromCart,
+        clearCart, // <--- EXPORTAMOS LA FUNCIÓN
         total,
         isOpen,
         openCart: () => setIsOpen(true),

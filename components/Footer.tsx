@@ -2,17 +2,18 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    // CAMBIO CLAVE: id="contacto" y scroll-mt-24
+    // id="contacto" y scroll-mt-24 para navegación suave
     <footer id="contacto" className="bg-cream-white text-warm-charcoal py-12 border-t-2 border-strawberry-milk/20 mt-20 scroll-mt-24">
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+      {/* CAMBIO: De 4 columnas pasamos a 3, ya que quitamos "Ayuda" */}
+      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* COLUMNA 1 */}
+        {/* COLUMNA 1: INFO Y REDES */}
         <div className="md:col-span-1">
           <Link href="/" className="text-3xl font-script text-deep-rose mb-4 block hover:opacity-80 transition-opacity">
             Un Dulcito
           </Link>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            Creando recuerdos dulces desde 2018. Cada postre está hecho a mano con amor, ingredientes de primera y una pizca de magia de Yola. 🧁✨
+            Creando recuerdos dulces desde 2024. Cada postre está hecho a mano con amor, ingredientes de primera y una pizca de magia de Yola. 🧁✨
           </p>
           
           <div className="flex gap-4">
@@ -31,7 +32,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* COLUMNA 2 */}
+        {/* COLUMNA 2: EXPLORAR */}
         <div>
           <h3 className="font-bold text-deep-rose mb-6 text-lg">Explorar</h3>
           <ul className="space-y-3 text-sm text-gray-500 font-medium">
@@ -42,31 +43,26 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* COLUMNA 3 */}
-        <div>
-          <h3 className="font-bold text-deep-rose mb-6 text-lg">Ayuda</h3>
-          <ul className="space-y-3 text-sm text-gray-500 font-medium">
-            <li><Link href="#" className="hover:text-deep-rose transition-colors opacity-50 cursor-not-allowed">Preguntas Frecuentes</Link></li>
-            <li><Link href="#" className="hover:text-deep-rose transition-colors opacity-50 cursor-not-allowed">Envíos</Link></li>
-            <li><Link href="#" className="hover:text-deep-rose transition-colors opacity-50 cursor-not-allowed">Devoluciones</Link></li>
-          </ul>
-        </div>
-
-        {/* COLUMNA 4 */}
+        {/* COLUMNA 3: CONTACTO (Actualizada) */}
         <div>
           <h3 className="font-bold text-deep-rose mb-6 text-lg">Contacto</h3>
           <ul className="space-y-4 text-sm text-gray-500 font-medium">
             <li className="flex items-start gap-3">
               <span className="text-xl">📍</span>
-              <a href="https://maps.google.com/?q=Maracaibo,Zulia" target="_blank" rel="noopener noreferrer" className="hover:text-deep-rose transition-colors">Maracaibo, Zulia<br/>Venezuela</a>
+              {/* Dirección actualizada a Parque Habitat */}
+              <a href="https://www.google.com/maps/place/Parque+Habitat/@10.6414223,-71.6042253,18.5z/data=!4m15!1m8!3m7!1s0x8e89998e7a5bd625:0xce0904e0ea8de74b!2sMaracaibo,+Zulia!3b1!8m2!3d10.6410135!4d-71.607381!16zL20vMDFsMjYz!3m5!1s0x8e89985be6f8cf61:0x20f81c9f2e2d3d99!8m2!3d10.6418446!4d-71.6033389!16s%2Fg%2F11bw1yxc0h?entry=ttu&g_ep=EgoyMDI2MDEwNy4wIKXMDSoKLDEwMDc5MjA3M0gBUAM%3D" target="_blank" rel="noopener noreferrer" className="hover:text-deep-rose transition-colors">
+                Parque Habitat<br/>Maracaibo, Zulia
+              </a>
             </li>
             <li className="flex items-center gap-3">
               <span className="text-xl">💌</span>
-              <a href="mailto:hola@undulcito.com" className="hover:text-deep-rose transition-colors">hola@undulcito.com</a>
+              {/* Correo actualizado */}
+              <a href="mailto:yolaypb@gmail.com" className="hover:text-deep-rose transition-colors">yolaypb@gmail.com</a>
             </li>
             <li className="flex items-center gap-3">
               <span className="text-xl">📞</span>
-              <a href="tel:+584141234567" className="hover:text-deep-rose transition-colors">+58 (414) 123-4567</a>
+              {/* Teléfono actualizado */}
+              <a href="tel:+584227186334" className="hover:text-deep-rose transition-colors">+58 422-7186334</a>
             </li>
           </ul>
         </div>

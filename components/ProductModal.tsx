@@ -90,7 +90,7 @@ export default function ProductModal({ isOpen, onClose, product, onAddToCart }: 
                 </h2>
                 
                 <p className="text-deep-rose font-extrabold text-3xl mb-6">
-                  ${product.price.toFixed(2)}
+                  €{product.price.toFixed(2)}
                 </p>
 
                 <p className="text-gray-600 leading-relaxed mb-8">
@@ -114,7 +114,7 @@ export default function ProductModal({ isOpen, onClose, product, onAddToCart }: 
                   }}
                   className="w-full bg-deep-rose text-white font-bold py-4 rounded-xl shadow-lg hover:bg-rose hover:scale-[1.02] active:scale-95 transition-all"
                 >
-                  Añadir al Carrito - ${product.price.toFixed(2)}
+                  Añadir al Carrito - €{product.price.toFixed(2)}
                 </button>
               </div>
             </div>

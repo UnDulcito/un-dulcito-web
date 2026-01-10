@@ -3,16 +3,18 @@
 import { motion } from "framer-motion";
 
 export default function FloatingWhatsapp() {
-  // RECUERDA: CAMBIAR POR EL NÚMERO REAL
-  const PHONE = "584121289510"; 
-  const MESSAGE = encodeURIComponent("Hola Yola, tengo una duda sobre los postres... 🧁");
+  // CAMBIO: Nuevo número de teléfono
+  const PHONE = "584227186334"; 
+  
+  // Mensaje simple sin emojis
+  const MESSAGE = encodeURIComponent("Hola Yola, tengo una duda sobre los postres...");
 
   return (
     <motion.a
       href={`https://wa.me/${PHONE}?text=${MESSAGE}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:bg-[#20bd5a] flex items-center justify-center cursor-pointer"
+      className="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:bg-[#20bd5a] flex items-center justify-center cursor-pointer group"
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ delay: 3, type: "spring" }} // Aparece 3 seg después del preloader

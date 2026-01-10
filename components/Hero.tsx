@@ -10,18 +10,22 @@ export default function Hero() {
   };
 
   return (
-    // AGREGAMOS EL ID AQUÍ
+    // ID "inicio" para que el botón de Home sepa volver aquí
     <section id="inicio" className="relative h-screen w-full overflow-hidden flex items-center justify-center">
       
       <div className="absolute inset-0 z-0">
+        {/* Capa de color semitransparente encima de la foto para que el texto se lea bien */}
         <div className="absolute inset-0 bg-gradient-to-br from-strawberry-milk via-soft-pink to-blush opacity-90 z-10" />
+        
+        {/* CAMBIO: Carga la imagen local PNG desde la carpeta public */}
         <img 
-          src="https://images.unsplash.com/photo-1579306194872-64d3b7bac4c2?w=1920&q=80" 
-          alt="Background" 
+          src="/hero-bg.png" 
+          alt="Fondo Un Dulcito" 
           className="w-full h-full object-cover"
         />
       </div>
 
+      {/* Elementos decorativos flotantes (círculos y formas) */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         <div className="absolute top-[15%] left-[5%] animate-bounce duration-[3000ms]">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="#D45D79" className="opacity-60">
@@ -35,6 +39,7 @@ export default function Hero() {
         </div>
       </div>
 
+      {/* Contenido Central */}
       <div className="relative z-20 text-center px-4 max-w-4xl mt-16">
         <p className="text-deep-rose font-bold tracking-[0.2em] uppercase mb-4 animate-fade-in-up">
           Handcrafted with Love
@@ -56,6 +61,7 @@ export default function Hero() {
         </div>
       </div>
 
+      {/* Flechita que rebota abajo */}
       <button 
         onClick={scrollToFavorites}
         className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce z-20 text-deep-rose cursor-pointer bg-transparent border-none"
