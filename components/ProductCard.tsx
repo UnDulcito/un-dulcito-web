@@ -4,28 +4,25 @@ import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
 
 interface ProductCardProps {
-  id: string | number; // CAMBIO: Aceptamos ambos tipos
+  id: string | number;
   name: string;
   price: number;
   image: string;
   category: string;
+  // AGREGAMOS ESTOS DOS COMO OPCIONALES (?) PARA QUE NO DE ERROR
+  description?: string; 
+  features?: string[];
 }
 
 export default function ProductCard({ id, name, price, image, category }: ProductCardProps) {
   const { addToCart, openCart } = useCart();
 
   const handleAddToCart = () => {
-    // Aseguramos que el ID sea numérico si el carrito lo exige, o lo manejamos como string
-    // Para evitar romper el contexto, pasamos el ID tal cual (pero el contexto debe soportarlo)
-    // Truco: Si el contexto espera number y firebase da string, generamos un hash simple o usamos timestamp
-    // PERO: Lo mejor es actualizar el Contexto. Por ahora, asumimos que el id lo pasamos tal cual.
-    
-    // Convertimos a número si es posible para mantener compatibilidad, si no, usamos un hash
-    const numericId = typeof id === 'string' ? parseInt(id, 36) : id; // Hack simple para convertir string a numero único
-    // O mejor aún, actualizamos el contexto luego. Por ahora, pasemos el objeto.
-    
+    // Parche de seguridad para el ID
+    const cartId = typeof id === 'string' ? new Date().getTime() + Math.random() : id;
+
     addToCart({ 
-        id: typeof id === 'string' ? Date.now() + Math.random() : id, // Parche rápido: ID único temporal para el carrito
+        id: cartId as number, // Aseguramos que sea número para el carrito
         name, 
         price, 
         image 
