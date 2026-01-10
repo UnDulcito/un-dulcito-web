@@ -18,6 +18,8 @@ interface Product {
   image: string;
   description?: string;
   features?: string[];
+  isBestSeller?: boolean; // NUEVO
+  bestSellerOrder?: number; // NUEVO
 }
 
 interface Category {
@@ -25,7 +27,6 @@ interface Category {
   name: string;
 }
 
-const DEFAULT_CATEGORIES = ["Cupcakes", "Tortas", "Macarons", "Galletas", "Donuts"];
 const DEFAULT_FEATURES = ["100% Natural", "Hecho en Casa", "Calidad Premium", "Delivery Disponible"];
 
 export default function Dashboard() {
@@ -38,12 +39,8 @@ export default function Dashboard() {
 
   // Estados Categorías
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
-  const [allCategories, setAllCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  
-  // NUEVO: Estado para gestionar el borrado de categorías
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
-  
   const [newCategoryName, setNewCategoryName] = useState("");
 
   // Estados Producto (Formulario)
@@ -52,6 +49,11 @@ export default function Dashboard() {
   const [newCategory, setNewCategory] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newFeatures, setNewFeatures] = useState<string[]>([...DEFAULT_FEATURES]);
+  
+  // NUEVO: Estados para Best Seller
+  const [isBestSeller, setIsBestSeller] = useState(false);
+  const [bestSellerOrder, setBestSellerOrder] = useState(0);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   
   const [editingId, setEditingId] = useState<string | null>(null); 
@@ -93,13 +95,9 @@ export default function Dashboard() {
       })) as Category[];
       setDbCategories(catsData);
       
-      const uniqueCategories = Array.from(new Set([
-        ...DEFAULT_CATEGORIES, 
-        ...catsData.map(c => c.name)
-      ]));
-      setAllCategories(uniqueCategories);
-      if (!editingId) { 
-          setNewCategory(prev => prev || uniqueCategories[0]);
+      // CAMBIO: Ya no mezclamos con DEFAULT_CATEGORIES. Solo lo que hay en la BD.
+      if (!editingId && catsData.length > 0) { 
+          setNewCategory(prev => prev || catsData[0].name);
       }
     });
 
@@ -119,6 +117,12 @@ export default function Dashboard() {
     if (!newName || !newPrice) {
       toast.error("Faltan nombre o precio 📝");
       return;
+    }
+    
+    // Si no hay categorías en la BD, obligar a crear una
+    if (dbCategories.length === 0 && !newCategory) {
+        toast.error("¡Crea una categoría primero!");
+        return;
     }
     
     if (!editingId && !imageFile) {
@@ -149,10 +153,12 @@ export default function Dashboard() {
       const productData = {
         name: newName,
         price: parseFloat(newPrice),
-        category: newCategory || allCategories[0],
+        category: newCategory || dbCategories[0]?.name,
         image: finalImageUrl,
-        description: newDescription || "Una explosión de sabor artesanal. Elaborado con los mejores ingredientes.",
+        description: newDescription || "Una explosión de sabor artesanal.",
         features: newFeatures,
+        isBestSeller: isBestSeller,        // NUEVO
+        bestSellerOrder: Number(bestSellerOrder), // NUEVO
         updatedAt: serverTimestamp(),
       };
 
@@ -185,6 +191,11 @@ export default function Dashboard() {
     setNewCategory(product.category);
     setNewDescription(product.description || "");
     setNewFeatures(product.features || [...DEFAULT_FEATURES]);
+    
+    // Cargar datos de Best Seller
+    setIsBestSeller(product.isBestSeller || false);
+    setBestSellerOrder(product.bestSellerOrder || 0);
+
     setCurrentImageUrl(product.image);
     setImageFile(null); 
     
@@ -198,14 +209,17 @@ export default function Dashboard() {
     setNewPrice("");
     setNewDescription("");
     setNewFeatures([...DEFAULT_FEATURES]);
+    setIsBestSeller(false); // Reset
+    setBestSellerOrder(0);  // Reset
     setImageFile(null);
     setCurrentImageUrl("");
-    setNewCategory(allCategories[0]);
+    if (dbCategories.length > 0) setNewCategory(dbCategories[0].name);
   };
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
-    if (allCategories.includes(newCategoryName.trim())) {
+    // Verificar duplicados en la BD local
+    if (dbCategories.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
       toast.error("Esa categoría ya existe");
       return;
     }
@@ -223,7 +237,6 @@ export default function Dashboard() {
     }
   };
 
-  // NUEVO: Borrar categoría
   const handleDeleteCategory = async (catId: string) => {
     if (!confirm("¿Seguro que quieres borrar esta categoría?")) return;
     try {
@@ -323,8 +336,8 @@ export default function Dashboard() {
                       <button type="button" onClick={handleCreateCategory} className="bg-deep-rose text-white px-3 rounded-r-xl font-bold hover:bg-rose">OK</button>
                     </div>
                   ) : isDeletingCategory ? (
-                    <div className="flex flex-wrap gap-2 p-2 bg-red-50 rounded-xl border border-red-100">
-                      {dbCategories.length === 0 && <span className="text-xs text-gray-400">No hay categorías personalizadas para borrar.</span>}
+                    <div className="flex flex-wrap gap-2 p-2 bg-red-50 rounded-xl border border-red-100 max-h-32 overflow-y-auto">
+                      {dbCategories.length === 0 && <span className="text-xs text-gray-400">No hay categorías para borrar.</span>}
                       {dbCategories.map(cat => (
                         <span key={cat.id} className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-md text-xs text-warm-charcoal shadow-sm border border-gray-100">
                           {cat.name}
@@ -340,10 +353,40 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose outline-none bg-white">
-                      {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      {dbCategories.length === 0 && <option value="">¡Crea una categoría!</option>}
+                      {dbCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                     </select>
                   )}
                 </div>
+              </div>
+
+              {/* SECCIÓN BEST SELLER (NUEVO) */}
+              <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                 <div className="flex items-center justify-between mb-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={isBestSeller} 
+                            onChange={(e) => setIsBestSeller(e.target.checked)} 
+                            className="w-5 h-5 text-deep-rose rounded focus:ring-deep-rose"
+                        />
+                        <span className="text-sm font-bold text-warm-charcoal">¿Es un Best Seller? ⭐</span>
+                    </label>
+                 </div>
+                 
+                 {isBestSeller && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Orden de aparición</label>
+                        <input 
+                            type="number" 
+                            value={bestSellerOrder} 
+                            onChange={(e) => setBestSellerOrder(Number(e.target.value))} 
+                            className="w-full p-2 rounded-lg border border-yellow-300 focus:border-deep-rose outline-none bg-white"
+                            placeholder="Ej. 1 para salir de primero"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">1 = Primero, 2 = Segundo...</p>
+                    </motion.div>
+                 )}
               </div>
 
               {/* Descripción */}
@@ -352,32 +395,9 @@ export default function Dashboard() {
                 <textarea 
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Escribe algo delicioso sobre este producto..."
+                  placeholder="Escribe algo delicioso..."
                   className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose focus:ring-1 focus:ring-deep-rose outline-none h-24 resize-none"
                 />
-              </div>
-
-              {/* Características */}
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Detalles</label>
-                <div className="grid grid-cols-2 gap-2">
-                   <div className="flex items-center gap-2">
-                     <span className="text-lg">🌿</span>
-                     <input type="text" value={newFeatures[0]} onChange={(e) => handleFeatureChange(0, e.target.value)} className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:border-deep-rose outline-none" />
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <span className="text-lg">🏠</span>
-                     <input type="text" value={newFeatures[1]} onChange={(e) => handleFeatureChange(1, e.target.value)} className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:border-deep-rose outline-none" />
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <span className="text-lg">⭐</span>
-                     <input type="text" value={newFeatures[2]} onChange={(e) => handleFeatureChange(2, e.target.value)} className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:border-deep-rose outline-none" />
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <span className="text-lg">🚚</span>
-                     <input type="text" value={newFeatures[3]} onChange={(e) => handleFeatureChange(3, e.target.value)} className="w-full p-2 text-xs rounded-lg border border-gray-200 focus:border-deep-rose outline-none" />
-                   </div>
-                </div>
               </div>
 
               {/* Foto */}
@@ -448,14 +468,23 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="flex-1 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-rose uppercase tracking-wide bg-rose/10 px-2 py-1 rounded-md w-fit mb-1">{product.category}</span>
+                      <div className="flex flex-wrap gap-1 mb-1">
+                          <span className="text-[10px] font-bold text-rose uppercase tracking-wide bg-rose/10 px-2 py-1 rounded-md w-fit">
+                            {product.category}
+                          </span>
+                          {/* INDICADOR VISUAL DE BEST SELLER */}
+                          {product.isBestSeller && (
+                             <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-md w-fit flex items-center gap-1">
+                                ⭐ Top #{product.bestSellerOrder}
+                             </span>
+                          )}
+                      </div>
                       <h3 className="font-bold text-warm-charcoal text-lg leading-tight">{product.name}</h3>
                       <p className="text-gray-500 font-medium mt-1">€{product.price.toFixed(2)}</p>
                     </div>
 
                     {/* Botonera de Acciones (SIEMPRE VISIBLE EN MÓVIL) */}
                     <div className="absolute top-2 right-2 flex gap-2 md:translate-x-14 md:group-hover:translate-x-0 transition-transform duration-300">
-                        {/* Botón EDITAR */}
                         <button 
                             onClick={() => handleEdit(product)}
                             className="p-2 bg-white/90 hover:bg-soft-gold/10 text-gray-400 hover:text-soft-gold rounded-full shadow-sm border border-transparent hover:border-soft-gold"
@@ -466,7 +495,6 @@ export default function Dashboard() {
                             </svg>
                         </button>
                         
-                        {/* Botón BORRAR */}
                         <button 
                             onClick={() => handleDelete(product.id)}
                             className="p-2 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full shadow-sm border border-transparent hover:border-red-200"
