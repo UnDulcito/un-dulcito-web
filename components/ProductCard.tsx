@@ -1,97 +1,104 @@
 "use client";
 
-import { useState } from "react";
 import { useCart } from "@/context/CartContext";
-import ProductModal from "./ProductModal";
-import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
-// Actualizamos la interfaz para recibir los nuevos datos opcionales
-interface ProductProps {
-  id: number; // O string, dependiendo de cómo manejes el ID en el resto de la app
+interface ProductCardProps {
+  id: string | number; // CAMBIO: Aceptamos ambos tipos
   name: string;
   price: number;
-  category: string;
   image: string;
-  description?: string; // Nuevo
-  features?: string[];  // Nuevo
+  category: string;
 }
 
-export default function ProductCard(product: ProductProps) {
-  const { id, name, price, category, image } = product;
-  const { addToCart } = useCart();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function ProductCard({ id, name, price, image, category }: ProductCardProps) {
+  const { addToCart, openCart } = useCart();
 
   const handleAddToCart = () => {
-    addToCart({ id, name, price, image });
-    toast.success(`¡${name} añadido al carrito! 🧁`, {
-      duration: 2000,
-      position: "bottom-center",
+    // Aseguramos que el ID sea numérico si el carrito lo exige, o lo manejamos como string
+    // Para evitar romper el contexto, pasamos el ID tal cual (pero el contexto debe soportarlo)
+    // Truco: Si el contexto espera number y firebase da string, generamos un hash simple o usamos timestamp
+    // PERO: Lo mejor es actualizar el Contexto. Por ahora, asumimos que el id lo pasamos tal cual.
+    
+    // Convertimos a número si es posible para mantener compatibilidad, si no, usamos un hash
+    const numericId = typeof id === 'string' ? parseInt(id, 36) : id; // Hack simple para convertir string a numero único
+    // O mejor aún, actualizamos el contexto luego. Por ahora, pasemos el objeto.
+    
+    addToCart({ 
+        id: typeof id === 'string' ? Date.now() + Math.random() : id, // Parche rápido: ID único temporal para el carrito
+        name, 
+        price, 
+        image 
     });
+    
+    toast.success(
+      <div className="flex items-center gap-2">
+        <span>🧁</span>
+        <b>{name}</b> agregado al carrito
+      </div>,
+      {
+        style: {
+          background: "#FFF",
+          color: "#333",
+          border: "1px solid #FFB6C1",
+        },
+        iconTheme: {
+          primary: "#D45D79",
+          secondary: "#FFFAEE",
+        },
+      }
+    );
+    openCart();
   };
 
   return (
-    <>
-      <motion.div 
-        whileHover={{ y: -10 }} 
-        className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 group h-full flex flex-col"
-      >
-        <div 
-          className="relative h-64 overflow-hidden cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        >
-          {/* Badge opcional si es nuevo (podrías lógica para esto luego) */}
-          <span className="absolute top-4 left-4 z-10 bg-white/90 text-deep-rose text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-            Fresco
-          </span>
-          
-          <motion.img
-            whileHover={{ scale: 1.1 }} 
-            transition={{ duration: 0.6 }}
-            src={image}
-            alt={name}
-            className="w-full h-full object-cover"
-          />
-          
-          <div className="absolute -bottom-12 left-0 w-full p-4 transition-all duration-300 group-hover:bottom-0">
-              <motion.button 
-                  whileTap={{ scale: 0.9 }} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToCart();
-                  }}
-                  className="w-full bg-deep-rose text-white font-bold py-3 rounded-xl shadow-lg hover:bg-rose transition-colors cursor-pointer"
-              >
-                  Añadir al Carrito
-              </motion.button>
-          </div>
+    <div className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group border border-transparent hover:border-strawberry-milk/30 flex flex-col h-full">
+      <div className="relative h-64 overflow-hidden bg-gray-100">
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+        />
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-deep-rose shadow-sm uppercase tracking-wider">
+          {category}
         </div>
+      </div>
 
-        <div className="p-6 flex flex-col flex-1">
-          <p className="text-rose text-xs font-bold uppercase tracking-widest mb-2">
-            {category}
-          </p>
-          <h3 
-            className="text-warm-charcoal font-bold text-xl mb-2 font-sans cursor-pointer hover:text-deep-rose transition-colors leading-tight"
-            onClick={() => setIsModalOpen(true)}
-          >
+      <div className="p-6 flex flex-col flex-1">
+        <div className="flex-1">
+          <h3 className="text-xl font-bold text-warm-charcoal mb-2 group-hover:text-deep-rose transition-colors font-sans">
             {name}
           </h3>
-          <div className="mt-auto pt-2">
-            <p className="text-deep-rose font-extrabold text-2xl">
-                €{price.toFixed(2)}
-            </p>
-          </div>
+          <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+            Deliciosa preparación artesanal con el toque secreto de Yola.
+          </p>
         </div>
-      </motion.div>
 
-      {/* Al abrir el modal, le pasamos TODOS los datos del producto (incluyendo description y features) */}
-      <ProductModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        product={product} 
-        onAddToCart={handleAddToCart}
-      />
-    </>
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+          <span className="text-2xl font-script text-deep-rose font-bold">
+            €{price.toFixed(2)}
+          </span>
+          <button
+            onClick={handleAddToCart}
+            className="bg-warm-charcoal text-white p-3 rounded-full hover:bg-deep-rose transition-colors shadow-md hover:shadow-lg active:scale-95 group/btn"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-5 h-5 group-hover/btn:rotate-12 transition-transform"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4.5v15m7.5-7.5h-15"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -3,16 +3,17 @@
 import { useEffect, useState } from "react";
 import ProductCard from "./ProductCard";
 import { db } from "@/lib/firebase";
-import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 interface Product {
-  id: string; // Cambio a string porque Firebase usa IDs de texto
+  id: string;
   name: string;
   price: number;
   category: string;
   image: string;
   description?: string;
   features?: string[];
+  bestSellerOrder?: number; // Para poder ordenar
 }
 
 export default function BestSellers() {
@@ -22,12 +23,10 @@ export default function BestSellers() {
   useEffect(() => {
     const fetchBestSellers = async () => {
       try {
-        // Consultamos productos marcados como Best Seller y ordenados por su número de orden
+        // 1. SOLO FILTRAMOS (Quitamos el orderBy para que Firebase no se queje del Índice)
         const q = query(
             collection(db, "products"), 
-            where("isBestSeller", "==", true),
-            orderBy("bestSellerOrder", "asc"),
-            limit(4) // Máximo 4 para no saturar el home
+            where("isBestSeller", "==", true)
         );
         
         const querySnapshot = await getDocs(q);
@@ -36,7 +35,13 @@ export default function BestSellers() {
             ...doc.data()
         })) as Product[];
         
-        setProducts(data);
+        // 2. ORDENAMOS AQUÍ (En JavaScript, más fácil y rápido para pocos datos)
+        // Ordenamos por el número 'bestSellerOrder' de menor a mayor
+        data.sort((a, b) => (a.bestSellerOrder || 99) - (b.bestSellerOrder || 99));
+
+        // 3. Tomamos solo los primeros 4
+        setProducts(data.slice(0, 4));
+        
       } catch (error) {
         console.error("Error cargando best sellers:", error);
       } finally {
@@ -62,12 +67,11 @@ export default function BestSellers() {
       );
   }
 
-  // Si Yola no ha configurado ninguno, mostramos mensaje o nada
+  // Si no hay productos marcados, no mostramos la sección
   if (products.length === 0) return null;
 
   return (
     <section id="favoritos" className="py-20 bg-cream-white relative overflow-hidden">
-      {/* Elementos decorativos de fondo */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-10 -left-10 w-64 h-64 bg-strawberry-milk/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 -right-20 w-80 h-80 bg-soft-gold/10 rounded-full blur-3xl"></div>
@@ -88,16 +92,10 @@ export default function BestSellers() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {products.map((product, index) => (
-             // Pasamos el ID como número si es posible, o adaptamos ProductCard para aceptar string
-             // Como solución rápida, hacemos un cast seguro, o ProductCard debe aceptar string en ID.
-             // Nota: En Next.js con Firebase, los IDs son strings. Asegúrate que ProductCard lo acepte.
-             // Si ProductCard espera number, tendrás que cambiarlo allí también.
-             // Asumo que ProductCard ya lo maneja o que editamos ProductCard para aceptar string | number.
+          {products.map((product) => (
              <ProductCard 
                 key={product.id} 
                 {...product} 
-                id={product.id as any} // Parche temporal si ProductCard es estricto con number
              />
           ))}
         </div>
