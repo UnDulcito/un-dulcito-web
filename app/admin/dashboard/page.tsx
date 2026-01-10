@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
-// 🔴 PEGA TU CLAVE DE IMGBB AQUÍ
+// 🔴 TU CLAVE DE IMGBB YA ESTÁ PUESTA
 const IMGBB_API_KEY = "311b995887253b03641cfaa6f53b3f96"; 
 
 interface Product {
@@ -31,7 +31,7 @@ const DEFAULT_FEATURES = ["100% Natural", "Hecho en Casa", "Calidad Premium", "D
 
 export default function Dashboard() {
   const router = useRouter();
-  const formRef = useRef<HTMLDivElement>(null); // Referencia para hacer scroll al formulario
+  const formRef = useRef<HTMLDivElement>(null); 
   
   const [user, setUser] = useState<any>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,8 +52,8 @@ export default function Dashboard() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   
   // ESTADO NUEVO PARA EDICIÓN
-  const [editingId, setEditingId] = useState<string | null>(null); // Si es null, estamos creando. Si tiene ID, editamos.
-  const [currentImageUrl, setCurrentImageUrl] = useState(""); // Para recordar la foto vieja si no suben una nueva
+  const [editingId, setEditingId] = useState<string | null>(null); 
+  const [currentImageUrl, setCurrentImageUrl] = useState(""); 
 
   const [isUploading, setIsUploading] = useState(false);
 
@@ -96,7 +96,7 @@ export default function Dashboard() {
         ...catsData.map(c => c.name)
       ]));
       setAllCategories(uniqueCategories);
-      if (!editingId) { // Solo resetear si no estamos editando
+      if (!editingId) { 
           setNewCategory(prev => prev || uniqueCategories[0]);
       }
     });
@@ -119,23 +119,20 @@ export default function Dashboard() {
       toast.error("Faltan nombre o precio 📝");
       return;
     }
-    // Si estamos creando (no editando), la foto es obligatoria.
-    // Si estamos editando, la foto es opcional (podemos mantener la vieja).
+    
     if (!editingId && !imageFile) {
         toast.error("La foto es obligatoria para nuevos productos 📸");
         return;
     }
 
-    if (IMGBB_API_KEY === "TU_API_KEY_DE_IMGBB") {
-        toast.error("¡Falta la API Key de ImgBB!");
-        return;
-    }
+    // --- CORRECCIÓN AQUÍ: Eliminamos el bloque IF que daba error ---
+    // Ya no verificamos si la clave es "TU_API_KEY..." porque ya pusiste la real.
 
     setIsUploading(true);
     const toastId = toast.loading(editingId ? "Actualizando..." : "Creando...");
 
     try {
-      let finalImageUrl = currentImageUrl; // Por defecto usamos la vieja (si editamos)
+      let finalImageUrl = currentImageUrl; 
 
       // SI HAY UN ARCHIVO NUEVO, SUBIMOS A IMGBB
       if (imageFile) {
@@ -149,7 +146,7 @@ export default function Dashboard() {
 
         const data = await response.json();
         if (!data.success) throw new Error("Error ImgBB");
-        finalImageUrl = data.data.url; // Nueva URL
+        finalImageUrl = data.data.url; 
       }
 
       const productData = {
@@ -171,12 +168,12 @@ export default function Dashboard() {
         // --- MODO CREACIÓN ---
         await addDoc(collection(db, "products"), {
             ...productData,
-            createdAt: serverTimestamp(), // Solo se pone al crear
+            createdAt: serverTimestamp(), 
         });
         toast.success("¡Producto creado! 🧁", { id: toastId });
       }
       
-      handleCancelEdit(); // Limpiar todo
+      handleCancelEdit(); 
 
     } catch (error) {
       console.error(error);
@@ -195,9 +192,8 @@ export default function Dashboard() {
     setNewDescription(product.description || "");
     setNewFeatures(product.features || [...DEFAULT_FEATURES]);
     setCurrentImageUrl(product.image);
-    setImageFile(null); // Reseteamos el archivo local
+    setImageFile(null); 
     
-    // Scroll suave hacia arriba para ver el formulario
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
     toast("Modo Edición Activado ✏️", { icon: '📝' });
   };
@@ -239,7 +235,7 @@ export default function Dashboard() {
     try {
       await deleteDoc(doc(db, "products", id));
       toast.success("Producto eliminado 🗑️");
-      if (editingId === id) handleCancelEdit(); // Si borras lo que editas, se limpia el form
+      if (editingId === id) handleCancelEdit(); 
     } catch (error) {
       toast.error("No se pudo borrar");
     }
