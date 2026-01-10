@@ -1,0 +1,88 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore";
+
+interface Review {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+}
+
+export default function Reviews() {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"), limit(10));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedReviews = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Review[];
+      setReviews(fetchedReviews);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <section className="py-24 bg-white relative overflow-hidden">
+      {/* Fondo Decorativo */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-strawberry-milk/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+      
+      <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
+        <h2 className="text-4xl md:text-5xl font-script text-deep-rose mb-12">
+          Lo que dicen nuestros clientes
+        </h2>
+
+        {loading ? (
+           <p className="text-gray-400">Cargando comentarios...</p>
+        ) : reviews.length > 0 ? (
+          // --- HAY RESEÑAS: MOSTRAR CARRUSEL ---
+          <div className="relative w-full overflow-hidden mb-12">
+            <div className="flex gap-6 animate-scroll whitespace-nowrap py-4">
+              {/* Duplicamos para efecto infinito */}
+              {[...reviews, ...reviews].map((review, index) => (
+                <div 
+                  key={`${review.id}-${index}`}
+                  className="inline-block w-[300px] md:w-[400px] bg-cream-white p-6 rounded-3xl border border-strawberry-milk/20 whitespace-normal text-left shadow-sm shrink-0"
+                >
+                  <div className="flex text-yellow-400 mb-3 text-lg">
+                    {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                  </div>
+                  <p className="text-warm-charcoal mb-4 italic text-sm md:text-base line-clamp-3">
+                    "{review.comment}"
+                  </p>
+                  <p className="font-bold text-deep-rose text-sm">
+                    — {review.name}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          // --- NO HAY RESEÑAS: INVITACIÓN ---
+          <div className="py-10 mb-8">
+            <span className="text-6xl block mb-4">🤐</span>
+            <p className="text-xl text-gray-500 mb-2">Aún nadie ha dejado su opinión.</p>
+            <p className="text-deep-rose font-bold text-lg">¡Sé el primero en estrenar esta sección!</p>
+          </div>
+        )}
+
+        {/* BOTÓN PARA DEJAR RESEÑA */}
+        <div>
+          <Link 
+            href="/dejar-resena"
+            className="inline-flex items-center gap-2 px-8 py-3 border-2 border-deep-rose text-deep-rose rounded-full font-bold hover:bg-deep-rose hover:text-white transition-all shadow-sm"
+          >
+            <span className="text-xl">✍️</span> Dejar una reseña
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
