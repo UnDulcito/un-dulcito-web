@@ -3,14 +3,13 @@
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import confetti from "canvas-confetti"; 
 
 export default function CartDrawer() {
   const { items, removeFromCart, total, isOpen, closeCart, clearCart } = useCart();
   const [bcvRate, setBcvRate] = useState<number | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
 
-  // 1. Buscamos la tasa al abrir (igual que antes)
   useEffect(() => {
     if (isOpen) {
         fetchBcvRate();
@@ -32,40 +31,42 @@ export default function CartDrawer() {
     }
   };
 
-  // 2. FORMATO DEL MENSAJE RESTAURADO
   const handleCheckout = () => {
     if (items.length === 0) return;
 
-    // Encabezado formal
-    let message = "¡Hola Un Dulcito! \nQuisiera realizar el siguiente pedido:\n\n";
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#D45D79', '#FFD1DC', '#FFD700'] 
+    });
+
+    // Encabezado formal sin emojis
+    let message = "Hola Un Dulcito! \nQuisiera realizar el siguiente pedido:\n\n";
     
-    // Lista de items con guión (-)
     items.forEach((item) => {
       message += `- ${item.quantity}x ${item.name} - €${(item.price * item.quantity).toFixed(2)}\n`;
     });
 
-    // Total en Euros
     message += `\n*TOTAL A PAGAR: €${total.toFixed(2)}*`;
     
-    // Agregamos el cálculo en Bolívares si tenemos la tasa (Información útil sin romper el formato)
     if (bcvRate) {
         message += `\n(Ref. BCV: Bs. ${(total * bcvRate).toFixed(2)})`;
     }
     
-    // Despedida formal
-    message += "\n\nQuedo atento para coordinar el pago y la entrega. ¡Gracias!";
+    message += "\n\nQuedo atento para coordinar el pago y la entrega. Gracias!";
 
     const encodedMessage = encodeURIComponent(message);
     
-    // 3. NÚMERO CORREGIDO DE YOLA (+58 422 7186334)
-    window.open(`https://wa.me/584227186334?text=${encodedMessage}`, "_blank");
+    setTimeout(() => {
+        window.open(`https://wa.me/584227186334?text=${encodedMessage}`, "_blank");
+    }, 800);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -74,7 +75,6 @@ export default function CartDrawer() {
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
           />
 
-          {/* Drawer */}
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -82,7 +82,6 @@ export default function CartDrawer() {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
           >
-            {/* Header */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-cream-white">
               <h2 className="text-2xl font-script text-deep-rose">Tu Pedido 🛒</h2>
               <button
@@ -93,19 +92,32 @@ export default function CartDrawer() {
               </button>
             </div>
 
-            {/* Lista */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
+            {/* CUERPO DEL CARRITO (ARREGLADO) */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 relative">
+              
+              {/* MENSAJE DE VACÍO (Solo aparece si no hay items) */}
+              {items.length === 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center opacity-50 z-0">
                   <span className="text-6xl mb-4">🍪</span>
                   <p>Tu carrito está vacío.</p>
                   <button onClick={closeCart} className="mt-4 text-deep-rose font-bold hover:underline">
                     Ir al menú
                   </button>
                 </div>
-              ) : (
-                items.map((item) => (
-                  <div key={item.id} className="flex gap-4 items-center">
+              )}
+
+              {/* LISTA DE ITEMS (Siempre montada para permitir animaciones de salida) */}
+              <AnimatePresence mode="popLayout">
+                {items.map((item) => (
+                  <motion.div 
+                    key={item.id} 
+                    layout 
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0, zIndex: 10 }} // zIndex alto para que pase por encima del mensaje de vacío
+                    exit={{ opacity: 0, x: -100, zIndex: 10 }} // Se va a la izquierda
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="flex gap-4 items-center bg-white relative z-10"
+                  >
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0 border border-gray-100">
                       <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     </div>
@@ -127,16 +139,14 @@ export default function CartDrawer() {
                         Quitar
                       </button>
                     </div>
-                  </div>
-                ))
-              )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
 
-            {/* Footer */}
             {items.length > 0 && (
-              <div className="p-6 border-t border-gray-100 bg-gray-50">
+              <div className="p-6 border-t border-gray-100 bg-gray-50 relative z-20">
                 <div className="space-y-3 mb-6">
-                    {/* Tasa BCV Display */}
                     <div className="flex justify-between items-center text-xs text-gray-400 bg-white p-2 rounded-lg border border-gray-200">
                         <span>Tasa BCV (Euro):</span>
                         {loadingRate ? (
@@ -153,7 +163,6 @@ export default function CartDrawer() {
                         <span className="text-2xl font-bold text-warm-charcoal">€{total.toFixed(2)}</span>
                     </div>
 
-                    {/* Total Bolívares */}
                     {bcvRate && (
                         <div className="flex justify-between items-end text-deep-rose animate-fade-in-up">
                             <span className="font-bold text-sm">Total Bolívares</span>
@@ -166,6 +175,7 @@ export default function CartDrawer() {
                     <button 
                         onClick={clearCart}
                         className="px-4 py-3 rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-100 transition-colors font-bold text-sm"
+                        title="Vaciar carrito"
                     >
                         🗑️
                     </button>
