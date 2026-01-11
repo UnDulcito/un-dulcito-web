@@ -3,7 +3,6 @@
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 import toast from "react-hot-toast";
 
 export default function CartDrawer() {
@@ -11,7 +10,7 @@ export default function CartDrawer() {
   const [bcvRate, setBcvRate] = useState<number | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
 
-  // Cada vez que se abre el carrito, buscamos la tasa fresca
+  // 1. Buscamos la tasa al abrir (igual que antes)
   useEffect(() => {
     if (isOpen) {
         fetchBcvRate();
@@ -33,31 +32,40 @@ export default function CartDrawer() {
     }
   };
 
+  // 2. FORMATO DEL MENSAJE RESTAURADO
   const handleCheckout = () => {
     if (items.length === 0) return;
 
-    let message = "Hola Yola! 👋 Quiero pedirte esto:\n\n";
+    // Encabezado formal
+    let message = "¡Hola Un Dulcito! 🧁\nQuisiera realizar el siguiente pedido:\n\n";
+    
+    // Lista de items con guión (-)
     items.forEach((item) => {
-      message += `▪️ ${item.quantity} x ${item.name} - €${(item.price * item.quantity).toFixed(2)}\n`;
+      message += `- ${item.quantity}x ${item.name} - €${(item.price * item.quantity).toFixed(2)}\n`;
     });
 
-    message += `\n*TOTAL EUR: €${total.toFixed(2)}*`;
+    // Total en Euros
+    message += `\n*TOTAL A PAGAR: €${total.toFixed(2)}*`;
     
-    // Si tenemos la tasa, la agregamos al mensaje de WhatsApp
+    // Agregamos el cálculo en Bolívares si tenemos la tasa (Información útil sin romper el formato)
     if (bcvRate) {
-        message += `\n*TOTAL BS (Tasa BCV ${bcvRate.toFixed(2)}): Bs. ${(total * bcvRate).toFixed(2)}*`;
+        message += `\n(Ref. BCV: Bs. ${(total * bcvRate).toFixed(2)})`;
     }
     
-    message += "\n\n¿Me confirmas disponibilidad? Gracias! 🧁";
+    // Despedida formal
+    message += "\n\nQuedo atento para coordinar el pago y la entrega. ¡Gracias!";
 
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/584121234567?text=${encodedMessage}`, "_blank");
+    
+    // 3. NÚMERO CORREGIDO DE YOLA (+58 422 7186334)
+    window.open(`https://wa.me/584227186334?text=${encodedMessage}`, "_blank");
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -66,6 +74,7 @@ export default function CartDrawer() {
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
           />
 
+          {/* Drawer */}
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -73,6 +82,7 @@ export default function CartDrawer() {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
           >
+            {/* Header */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-cream-white">
               <h2 className="text-2xl font-script text-deep-rose">Tu Pedido 🛒</h2>
               <button
@@ -83,6 +93,7 @@ export default function CartDrawer() {
               </button>
             </div>
 
+            {/* Lista */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
@@ -121,14 +132,15 @@ export default function CartDrawer() {
               )}
             </div>
 
+            {/* Footer */}
             {items.length > 0 && (
               <div className="p-6 border-t border-gray-100 bg-gray-50">
                 <div className="space-y-3 mb-6">
-                    {/* VISOR DE TASA BCV */}
+                    {/* Tasa BCV Display */}
                     <div className="flex justify-between items-center text-xs text-gray-400 bg-white p-2 rounded-lg border border-gray-200">
                         <span>Tasa BCV (Euro):</span>
                         {loadingRate ? (
-                            <span className="animate-pulse text-deep-rose">Consultando BCV...</span>
+                            <span className="animate-pulse text-deep-rose">Consultando...</span>
                         ) : bcvRate ? (
                             <span className="font-mono font-bold text-warm-charcoal">{bcvRate.toFixed(2)} Bs/€</span>
                         ) : (
@@ -141,7 +153,7 @@ export default function CartDrawer() {
                         <span className="text-2xl font-bold text-warm-charcoal">€{total.toFixed(2)}</span>
                     </div>
 
-                    {/* TOTAL CALCULADO EN BOLÍVARES */}
+                    {/* Total Bolívares */}
                     {bcvRate && (
                         <div className="flex justify-between items-end text-deep-rose animate-fade-in-up">
                             <span className="font-bold text-sm">Total Bolívares</span>
