@@ -37,7 +37,7 @@ export default function CartDrawer() {
     if (items.length === 0) return;
 
     // Encabezado formal
-    let message = "¡Hola Un Dulcito! 🧁\nQuisiera realizar el siguiente pedido:\n\n";
+    let message = "¡Hola Un Dulcito! \nQuisiera realizar el siguiente pedido:\n\n";
     
     // Lista de items con guión (-)
     items.forEach((item) => {
