@@ -2,19 +2,19 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-// CAMBIO: id ahora puede ser string (texto) o number
 export interface CartItem {
   id: string | number; 
   name: string;
   price: number;
   image: string;
   quantity: number;
+  stock: number; // NUEVO: Límite máximo
 }
 
 interface CartContextType {
   items: CartItem[];
   addToCart: (product: Omit<CartItem, "quantity">) => void;
-  removeFromCart: (id: string | number) => void; // CAMBIO AQUÍ TAMBIÉN
+  removeFromCart: (id: string | number) => void;
   clearCart: () => void;
   total: number;
   isOpen: boolean;
@@ -31,17 +31,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (product: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
-      // Ahora comparamos IDs reales, sin inventos raros
       const existing = prev.find((item) => item.id === product.id);
+      
       if (existing) {
-        // Si ya existe, sumamos +1 a la cantidad
+        // VALIDACIÓN DE STOCK: Si ya tienes el máximo, no agregamos más
+        if (existing.quantity >= product.stock) {
+            return prev; // No hacemos nada, ya llegaste al tope
+        }
         return prev.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      // Si no existe, lo agregamos nuevo
+      
+      // Si el stock es 0 (por seguridad), no agrega
+      if (product.stock <= 0) return prev;
+
       return [...prev, { ...product, quantity: 1 }];
     });
   };

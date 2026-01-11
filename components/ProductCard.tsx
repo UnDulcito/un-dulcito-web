@@ -13,24 +13,43 @@ interface ProductCardProps {
   category: string;
   description?: string;
   features?: string[];
+  stock?: number; 
 }
 
 export default function ProductCard(props: ProductCardProps) {
-  const { id, name, price, image, category } = props;
-  const { addToCart } = useCart(); // YA NO IMPORTAMOS openCart AQUÍ
+  const { id, name, price, image, category, stock = 0 } = props;
+  const { addToCart, items } = useCart();
   const [showModal, setShowModal] = useState(false);
 
-  const handleAddToCart = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  // Cuántos tenemos ya en el carrito
+  const cartItem = items.find((item) => item.id === id);
+  const currentQty = cartItem ? cartItem.quantity : 0;
+  
+  // ¿Está agotado?
+  const isOutOfStock = stock === 0;
 
-    // 1. ELIMINADO: Ya no generamos ID aleatorio. Usamos el ID real de Firebase.
-    // Esto arregla que los productos se agrupen (5 brookies = Cantidad: 5).
-    
+  const handleAddToCart = (e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Que no abra el modal si le damos al botón
+
+    // VALIDACIÓN ESTRICTA VISIBLE
+    if (currentQty >= stock) {
+        toast.error(`¡Ups! Solo nos quedan ${stock} unidades de ${name} 😅`, {
+            style: {
+                background: '#FFE5E5',
+                color: '#D8000C',
+                border: '1px solid #D8000C'
+            },
+            icon: '🛑'
+        });
+        return;
+    }
+
     addToCart({ 
         id: id, 
         name, 
         price, 
-        image 
+        image,
+        stock 
     });
     
     toast.success(
@@ -51,20 +70,19 @@ export default function ProductCard(props: ProductCardProps) {
       }
     );
     
-    // 2. ELIMINADO: openCart(); 
-    // Ahora el carrito NO se abre solo. Se queda cerrado para seguir comprando.
-    
     if (showModal) setShowModal(false);
   };
 
   return (
     <>
       <div 
-        className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group border border-transparent hover:border-strawberry-milk/30 flex flex-col h-full"
+        className={`bg-white rounded-3xl overflow-hidden shadow-lg transition-all duration-300 group border border-transparent flex flex-col h-full relative ${
+            isOutOfStock ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-2xl hover:border-strawberry-milk/30'
+        }`}
       >
         <div 
             className="relative h-64 overflow-hidden bg-gray-100 cursor-pointer"
-            onClick={() => setShowModal(true)}
+            onClick={() => !isOutOfStock && setShowModal(true)}
         >
           <img
             src={image}
@@ -74,10 +92,25 @@ export default function ProductCard(props: ProductCardProps) {
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-deep-rose shadow-sm uppercase tracking-wider">
             {category}
           </div>
+          
+          {/* ETIQUETA DE STOCK VISIBLE PARA EL CLIENTE */}
+          {!isOutOfStock && (
+             <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm border border-white/20">
+                📦 Stock: {stock}
+             </div>
+          )}
+
+          {isOutOfStock && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                  <span className="bg-red-500 text-white px-6 py-2 rounded-full font-bold rotate-12 border-4 border-white shadow-xl text-lg">
+                      AGOTADO
+                  </span>
+              </div>
+          )}
         </div>
 
         <div className="p-6 flex flex-col flex-1">
-          <div className="flex-1 cursor-pointer" onClick={() => setShowModal(true)}>
+          <div className="flex-1 cursor-pointer" onClick={() => !isOutOfStock && setShowModal(true)}>
             <h3 className="text-xl font-bold text-warm-charcoal mb-2 group-hover:text-deep-rose transition-colors font-sans">
               {name}
             </h3>
@@ -92,34 +125,37 @@ export default function ProductCard(props: ProductCardProps) {
             </span>
             <button
               onClick={handleAddToCart}
-              className="bg-warm-charcoal text-white p-3 rounded-full hover:bg-deep-rose transition-colors shadow-md hover:shadow-lg active:scale-95 group/btn z-10"
-              title="Añadir al carrito"
+              disabled={isOutOfStock}
+              className={`p-3 rounded-full transition-colors shadow-md flex items-center justify-center relative ${
+                  isOutOfStock
+                  ? 'bg-gray-200 cursor-not-allowed text-gray-400' 
+                  : 'bg-warm-charcoal text-white hover:bg-deep-rose hover:shadow-lg active:scale-95'
+              }`}
+              title={isOutOfStock ? "Agotado" : `Añadir al carrito (Quedan ${stock})`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="w-5 h-5 group-hover/btn:rotate-12 transition-transform"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
             </button>
           </div>
         </div>
       </div>
 
-      <ProductModal 
-        isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
-        product={props} 
-        onAddToCart={() => handleAddToCart()} 
-      />
+      {!isOutOfStock && (
+          <ProductModal 
+            isOpen={showModal} 
+            onClose={() => setShowModal(false)} 
+            product={{...props, stock}} 
+            onAddToCart={() => handleAddToCart()} 
+          />
+      )}
     </>
   );
 }

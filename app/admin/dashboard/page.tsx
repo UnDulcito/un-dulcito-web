@@ -18,8 +18,9 @@ interface Product {
   image: string;
   description?: string;
   features?: string[];
-  isBestSeller?: boolean; // NUEVO
-  bestSellerOrder?: number; // NUEVO
+  isBestSeller?: boolean; 
+  bestSellerOrder?: number;
+  stock: number; // NUEVO: Campo de Stock
 }
 
 interface Category {
@@ -46,20 +47,23 @@ export default function Dashboard() {
   // Estados Producto (Formulario)
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
+  const [newStock, setNewStock] = useState("0"); // NUEVO: Estado para Stock
   const [newCategory, setNewCategory] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newFeatures, setNewFeatures] = useState<string[]>([...DEFAULT_FEATURES]);
   
-  // NUEVO: Estados para Best Seller
+  // Estados Best Seller
   const [isBestSeller, setIsBestSeller] = useState(false);
   const [bestSellerOrder, setBestSellerOrder] = useState(0);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
-  
   const [editingId, setEditingId] = useState<string | null>(null); 
   const [currentImageUrl, setCurrentImageUrl] = useState(""); 
-
   const [isUploading, setIsUploading] = useState(false);
+
+  // NUEVO: Estados para Modal de Venta Rápida
+  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+  const [saleData, setSaleData] = useState({ productId: "", quantity: "1" });
 
   // 1. Auth Check
   useEffect(() => {
@@ -83,6 +87,7 @@ export default function Dashboard() {
       const productsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        stock: doc.data().stock || 0 // Aseguramos que stock exista
       })) as Product[];
       setProducts(productsData);
     });
@@ -95,7 +100,6 @@ export default function Dashboard() {
       })) as Category[];
       setDbCategories(catsData);
       
-      // CAMBIO: Ya no mezclamos con DEFAULT_CATEGORIES. Solo lo que hay en la BD.
       if (!editingId && catsData.length > 0) { 
           setNewCategory(prev => prev || catsData[0].name);
       }
@@ -119,7 +123,6 @@ export default function Dashboard() {
       return;
     }
     
-    // Si no hay categorías en la BD, obligar a crear una
     if (dbCategories.length === 0 && !newCategory) {
         toast.error("¡Crea una categoría primero!");
         return;
@@ -157,8 +160,9 @@ export default function Dashboard() {
         image: finalImageUrl,
         description: newDescription || "Una explosión de sabor artesanal.",
         features: newFeatures,
-        isBestSeller: isBestSeller,        // NUEVO
-        bestSellerOrder: Number(bestSellerOrder), // NUEVO
+        isBestSeller: isBestSeller,
+        bestSellerOrder: Number(bestSellerOrder),
+        stock: parseInt(newStock) || 0, // NUEVO: Guardamos Stock
         updatedAt: serverTimestamp(),
       };
 
@@ -188,11 +192,11 @@ export default function Dashboard() {
     setEditingId(product.id);
     setNewName(product.name);
     setNewPrice(product.price.toString());
+    setNewStock(product.stock?.toString() || "0"); // Cargar stock al editar
     setNewCategory(product.category);
     setNewDescription(product.description || "");
     setNewFeatures(product.features || [...DEFAULT_FEATURES]);
     
-    // Cargar datos de Best Seller
     setIsBestSeller(product.isBestSeller || false);
     setBestSellerOrder(product.bestSellerOrder || 0);
 
@@ -207,18 +211,47 @@ export default function Dashboard() {
     setEditingId(null);
     setNewName("");
     setNewPrice("");
+    setNewStock("0"); // Reset stock
     setNewDescription("");
     setNewFeatures([...DEFAULT_FEATURES]);
-    setIsBestSeller(false); // Reset
-    setBestSellerOrder(0);  // Reset
+    setIsBestSeller(false); 
+    setBestSellerOrder(0); 
     setImageFile(null);
     setCurrentImageUrl("");
     if (dbCategories.length > 0) setNewCategory(dbCategories[0].name);
   };
 
+  // NUEVO: Función para venta rápida
+  const handleQuickSale = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const { productId, quantity } = saleData;
+      const qtyNum = parseInt(quantity);
+      
+      if (!productId || qtyNum <= 0) return;
+
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+
+      const newStockVal = (product.stock || 0) - qtyNum;
+
+      if (newStockVal < 0) {
+          toast.error("¡No tienes suficiente stock para vender eso!");
+          return;
+      }
+
+      try {
+          const docRef = doc(db, "products", productId);
+          await updateDoc(docRef, { stock: newStockVal });
+          toast.success(`Venta registrada. Nuevo stock: ${newStockVal} 📉`);
+          setIsSaleModalOpen(false);
+          setSaleData({ productId: "", quantity: "1" });
+      } catch (error) {
+          toast.error("Error al registrar venta");
+      }
+  };
+
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
-    // Verificar duplicados en la BD local
     if (dbCategories.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
       toast.error("Esa categoría ya existe");
       return;
@@ -266,22 +299,38 @@ export default function Dashboard() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-cream-white text-deep-rose font-bold">Cargando Panel...</div>;
 
   return (
-    <div className="min-h-screen bg-cream-white p-6 md:p-12">
+    // FIX: Agregamos pt-28 md:pt-32 para que el Navbar fijo no tape los botones
+    <div className="min-h-screen bg-cream-white px-6 pb-12 pt-28 md:px-12 md:pb-12 md:pt-32">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-12 gap-4">
         <div>
           <h1 className="text-4xl font-script text-deep-rose">Panel de Control</h1>
           <p className="text-gray-500">Hola, {user?.email} 👋</p>
         </div>
-        <button onClick={handleLogout} className="bg-warm-charcoal text-white px-6 py-2 rounded-full hover:bg-black transition-colors text-sm font-bold">
-          Cerrar Sesión
-        </button>
+        
+        {/* FIX: relative z-10 para asegurar que los botones reciban clicks */}
+        <div className="flex gap-3 relative z-10">
+             <button 
+                type="button"
+                onClick={() => setIsSaleModalOpen(true)}
+                className="bg-green-500 text-white px-6 py-2 rounded-full hover:bg-green-600 transition-colors text-sm font-bold shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+                💰 Venta Rápida
+            </button>
+            <button 
+                type="button"
+                onClick={handleLogout} 
+                className="bg-warm-charcoal text-white px-6 py-2 rounded-full hover:bg-black transition-colors text-sm font-bold shadow-sm cursor-pointer"
+            >
+                Cerrar Sesión
+            </button>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
         
         {/* COLUMNA IZQUIERDA: FORMULARIO */}
         <div className="lg:col-span-1" ref={formRef}>
-          <div className={`bg-white p-8 rounded-3xl shadow-xl sticky top-8 border border-strawberry-milk/20 max-h-[90vh] overflow-y-auto transition-colors ${editingId ? 'border-l-8 border-l-soft-gold' : ''}`}>
+          <div className={`bg-white p-8 rounded-3xl shadow-xl sticky top-24 border border-strawberry-milk/20 max-h-[85vh] overflow-y-auto transition-colors ${editingId ? 'border-l-8 border-l-soft-gold' : ''}`}>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-warm-charcoal flex items-center gap-2">
                 <span>{editingId ? "✏️" : "✨"}</span> 
@@ -302,13 +351,26 @@ export default function Dashboard() {
                 <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej. Helado de Fresa" className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose focus:ring-1 focus:ring-deep-rose outline-none" />
               </div>
 
-              {/* Precio y Categoría */}
+              {/* Precio y Stock (NUEVO LAYOUT) */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Precio (€)</label>
                   <input type="number" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="0.00" className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose outline-none" />
                 </div>
                 <div>
+                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Stock</label>
+                   <input 
+                        type="number" 
+                        value={newStock} 
+                        onChange={(e) => setNewStock(e.target.value)} 
+                        className="w-full p-3 rounded-xl border border-gray-200 focus:border-deep-rose outline-none"
+                        placeholder="0"
+                    />
+                </div>
+              </div>
+
+              {/* Categoría */}
+              <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 flex justify-between items-center">
                     Categoría
                     <div className="flex gap-2">
@@ -357,10 +419,9 @@ export default function Dashboard() {
                       {dbCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                     </select>
                   )}
-                </div>
               </div>
 
-              {/* SECCIÓN BEST SELLER (NUEVO) */}
+              {/* SECCIÓN BEST SELLER */}
               <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
                  <div className="flex items-center justify-between mb-2">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -472,7 +533,16 @@ export default function Dashboard() {
                           <span className="text-[10px] font-bold text-rose uppercase tracking-wide bg-rose/10 px-2 py-1 rounded-md w-fit">
                             {product.category}
                           </span>
-                          {/* INDICADOR VISUAL DE BEST SELLER */}
+                          
+                          {/* INDICADOR STOCK (NUEVO) */}
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded-md w-fit ${
+                              product.stock === 0 ? 'bg-red-100 text-red-600' :
+                              product.stock < 5 ? 'bg-orange-100 text-orange-600' :
+                              'bg-green-100 text-green-600'
+                          }`}>
+                            Stock: {product.stock}
+                          </span>
+
                           {product.isBestSeller && (
                              <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-md w-fit flex items-center gap-1">
                                 ⭐ Top #{product.bestSellerOrder}
@@ -483,7 +553,7 @@ export default function Dashboard() {
                       <p className="text-gray-500 font-medium mt-1">€{product.price.toFixed(2)}</p>
                     </div>
 
-                    {/* Botonera de Acciones (SIEMPRE VISIBLE EN MÓVIL) */}
+                    {/* Botonera de Acciones */}
                     <div className="absolute top-2 right-2 flex gap-2 md:translate-x-14 md:group-hover:translate-x-0 transition-transform duration-300">
                         <button 
                             onClick={() => handleEdit(product)}
@@ -512,6 +582,58 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* MODAL VENTA RÁPIDA (NUEVO) */}
+      {isSaleModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  💰 Registrar Venta
+              </h3>
+              <form onSubmit={handleQuickSale}>
+                  <label className="block text-sm text-gray-500 mb-1">Producto Vendido</label>
+                  <select 
+                      className="w-full border border-gray-300 p-3 rounded-lg mb-4 bg-gray-50 text-warm-charcoal"
+                      value={saleData.productId}
+                      onChange={(e) => setSaleData({...saleData, productId: e.target.value})}
+                      required
+                  >
+                      <option value="">Selecciona un producto...</option>
+                      {products.filter(p => p.stock > 0).map(p => (
+                          <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                      ))}
+                  </select>
+
+                  <label className="block text-sm text-gray-500 mb-1">Cantidad Vendida</label>
+                  <input 
+                      type="number" 
+                      min="1"
+                      className="w-full border border-gray-300 p-3 rounded-lg mb-6"
+                      value={saleData.quantity}
+                      onChange={(e) => setSaleData({...saleData, quantity: e.target.value})}
+                      required
+                  />
+
+                  <div className="flex gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setIsSaleModalOpen(false)}
+                        className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-lg"
+                      >
+                          Cancelar
+                      </button>
+                      <button 
+                        type="submit"
+                        className="flex-1 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 shadow-md"
+                      >
+                          Confirmar
+                      </button>
+                  </div>
+              </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
